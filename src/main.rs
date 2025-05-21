@@ -2,11 +2,10 @@ use std::io::Write;
 use std::{env, path::Path, process};
 use std::fs::{self, File};
 
-const EXTENSIONS: [&str; 5] = ["py", "cs", "csproj", "axaml", "xaml"];
+const EXTENSIONS: [&str; 6] = ["py", "cs", "csproj", "axaml", "xaml", "rs"];
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    dbg!(&args);
 
     check_args(&args);
 
@@ -20,11 +19,9 @@ fn main() {
 
 fn walk_dir(path: &Path, mut output: &File) {
     let read_dir = fs::read_dir(path).unwrap();
-    // dbg!(&read_dir);
 
     for dir_entry in read_dir {
         let dir_entry = dir_entry.unwrap();
-        dbg!(dir_entry.path().display());
         let file_type = dir_entry.file_type().unwrap();
         let dir_entry_path = dir_entry.path();
         if file_type.is_dir() {
@@ -35,7 +32,6 @@ fn walk_dir(path: &Path, mut output: &File) {
                 continue;
             }
             let extension = extension.unwrap();
-            dbg!(&extension);
             if EXTENSIONS.contains(&extension.to_str().unwrap()) {
                 let contents = fs::read_to_string(&dir_entry_path).unwrap();
                 writeln!(output, "{}", dir_entry_path.display());
