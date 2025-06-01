@@ -2,7 +2,7 @@ use std::io::Write;
 use std::{env, path::Path, process};
 use std::fs::{self, File};
 
-const EXTENSIONS: [&str; 6] = ["py", "cs", "csproj", "axaml", "xaml", "rs"];
+const EXTENSIONS: [&str; 9] = ["py", "cs", "csproj", "axaml", "xaml", "rs", "lua", "js", "json"];
 
 fn main() {
     let args: Vec<String> = env::args().collect();
