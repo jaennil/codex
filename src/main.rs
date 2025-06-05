@@ -1,6 +1,10 @@
 use std::io::Write;
+use std::thread::sleep;
+use std::time::Duration;
 use std::{env, path::Path, process};
 use std::fs::{self, File};
+
+use copypasta::{ClipboardContext, ClipboardProvider as _};
 
 const EXTENSIONS: [&str; 9] = ["py", "cs", "csproj", "axaml", "xaml", "rs", "lua", "js", "json"];
 
@@ -14,6 +18,16 @@ fn main() {
 
     let code = File::create("code").unwrap();
     walk_dir(path, &code);
+
+    let mut ctx = ClipboardContext::new().unwrap();
+    let content = fs::read_to_string("code").unwrap();
+    ctx.set_contents(content).unwrap();
+    println!("code copied to clipboard and will be there for 10 seconds");
+
+    for i in (0..10).rev() {
+        sleep(Duration::new(1, 0));
+        println!("{}", i);
+    }
 
 }
 
