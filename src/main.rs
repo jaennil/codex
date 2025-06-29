@@ -6,7 +6,7 @@ use std::fs::{self, File};
 
 use copypasta::{ClipboardContext, ClipboardProvider as _};
 
-const EXTENSIONS: [&str; 9] = ["py", "cs", "csproj", "axaml", "xaml", "rs", "lua", "js", "json"];
+const EXTENSIONS: [&str; 10] = ["go", "py", "cs", "csproj", "axaml", "xaml", "rs", "lua", "js", "json"];
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -56,7 +56,7 @@ fn walk_dir(path: &Path, mut output: &File) {
 }
 
 fn check_args(args: &Vec<String>) {
-    if args.len() != 2 {
+    if args.len() < 2 {
         eprintln!("Usage: {} <path>", args[0]);
         process::exit(1);
     }
