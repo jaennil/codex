@@ -5,15 +5,16 @@ use std::{env, path::Path, process};
 use std::fs::{self, File};
 use copypasta::{ClipboardContext, ClipboardProvider as _};
 
-const EXTENSIONS: [&str; 12] = ["go", "py", "cs", "csproj", "axaml", "xaml", "rs", "lua", "js", "json", "txt", "ipynb"];
+const DEFAULT_EXTENSIONS: [&str; 12] = ["go", "py", "cs", "csproj", "axaml", "xaml", "rs", "lua", "js", "json", "txt", "ipynb"];
 
 fn main() {
     println!("[INFO] Starting code aggregator");
     
     let args: Vec<String> = env::args().collect();
-    let (path_arg, exclude_folders) = check_args(&args);
+    let (path_arg, exclude_folders, extensions) = check_args(&args);
     
     println!("[INFO] Target path: {}", path_arg);
+    println!("[INFO] Processing extensions: {:?}", extensions);
     if !exclude_folders.is_empty() {
         println!("[INFO] Excluding folders: {:?}", exclude_folders);
     }
@@ -38,7 +39,7 @@ fn main() {
     };
     
     println!("[INFO] Walking directory tree...");
-    let file_count = walk_dir(path, &code, &exclude_folders);
+    let file_count = walk_dir(path, &code, &exclude_folders, &extensions);
     println!("[SUCCESS] Processed {} files", file_count);
     
     println!("[INFO] Initializing clipboard context");
@@ -83,7 +84,7 @@ fn main() {
     println!("[INFO] Program completed successfully");
 }
 
-fn walk_dir(path: &Path, mut output: &File, exclude_folders: &[String]) -> usize {
+fn walk_dir(path: &Path, mut output: &File, exclude_folders: &[String], extensions: &[String]) -> usize {
     let mut file_count = 0;
     
     let read_dir = match fs::read_dir(path) {
@@ -124,7 +125,7 @@ fn walk_dir(path: &Path, mut output: &File, exclude_folders: &[String]) -> usize
             }
             
             println!("[DEBUG] Entering directory: {}", dir_entry_path.display());
-            file_count += walk_dir(&dir_entry_path, output, exclude_folders);
+            file_count += walk_dir(&dir_entry_path, output, exclude_folders, extensions);
         } else if file_type.is_file() {
             let extension = dir_entry_path.extension();
             if extension.is_none() {
@@ -132,7 +133,9 @@ fn walk_dir(path: &Path, mut output: &File, exclude_folders: &[String]) -> usize
             }
             
             let extension = extension.unwrap();
-            if EXTENSIONS.contains(&extension.to_str().unwrap()) {
+            let extension_str = extension.to_str().unwrap();
+            
+            if extensions.iter().any(|ext| ext == extension_str) {
                 println!("[INFO] Processing file: {}", dir_entry_path.display());
                 
                 let contents = match fs::read_to_string(&dir_entry_path) {
@@ -167,22 +170,47 @@ fn walk_dir(path: &Path, mut output: &File, exclude_folders: &[String]) -> usize
     file_count
 }
 
-fn check_args(args: &Vec<String>) -> (String, Vec<String>) {
+fn check_args(args: &Vec<String>) -> (String, Vec<String>, Vec<String>) {
     if args.len() < 2 {
         eprintln!("[ERROR] Missing required argument");
-        eprintln!("Usage: {} <path> [--exclude folder1 folder2 ...]", args[0]);
+        eprintln!("Usage: {} <path> [--exclude folder1 folder2 ...] [-e ext1 ext2 ...]", args[0]);
         eprintln!("Example: {} ./myproject --exclude target node_modules .git", args[0]);
+        eprintln!("Example: {} . -e json js tsx jsx", args[0]);
+        eprintln!("Example: {} . --exclude target node_modules -e json js tsx", args[0]);
         process::exit(1);
     }
     
     let path = args[1].clone();
     let mut exclude_folders = Vec::new();
+    let mut extensions: Vec<String> = DEFAULT_EXTENSIONS.iter().map(|s| s.to_string()).collect();
     
-    if let Some(exclude_pos) = args.iter().position(|arg| arg == "--exclude") {
-        exclude_folders = args[exclude_pos + 1..].to_vec();
-        println!("[INFO] Found {} folders to exclude", exclude_folders.len());
+    let mut i = 2;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--exclude" => {
+                i += 1;
+                while i < args.len() && !args[i].starts_with('-') {
+                    exclude_folders.push(args[i].clone());
+                    i += 1;
+                }
+                continue;
+            }
+            "-e" => {
+                i += 1;
+                extensions.clear(); // Replace default extensions with user-provided ones
+                while i < args.len() && !args[i].starts_with('-') {
+                    extensions.push(args[i].clone());
+                    i += 1;
+                }
+                continue;
+            }
+            _ => {
+                // Skip unknown arguments
+                i += 1;
+            }
+        }
     }
     
     println!("[INFO] Arguments validated");
-    (path, exclude_folders)
+    (path, exclude_folders, extensions)
 }
